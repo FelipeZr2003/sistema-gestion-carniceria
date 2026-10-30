@@ -73,7 +73,7 @@ Las credenciales están publicadas deliberadamente para probar la interfaz; no s
 1. Crea un repositorio público llamado `sistema-gestion-carniceria` y sube el código fuente.
 2. No subas `.env`, `data/` ni `node_modules/`. El `.gitignore` los excluye. La base local puede contener datos privados aunque esta copia de muestra esté sanitizada.
 3. En GitHub, abre **Settings → Actions → General → Workflow permissions** y permite los permisos requeridos por los workflows.
-4. En **Settings → Pages**, elige **GitHub Actions** como fuente de publicación.
+4. No necesitas habilitar Pages manualmente: el workflow `.github/workflows/pages.yml` lo activa con **GitHub Actions** durante el primer despliegue.
 5. Sube la rama `main`. El workflow `.github/workflows/pages.yml` publica el `index.html` estático y la carpeta `public/`.
 6. Espera a que termine el workflow **Publish public demo to GitHub Pages** y abre la URL indicada en el entorno `github-pages` del workflow.
 
