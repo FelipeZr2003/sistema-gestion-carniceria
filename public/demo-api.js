@@ -272,7 +272,7 @@
           bonuses: Number(entry.bonuses) || 0,
           deductions: Number(entry.deductions) || 0,
           pay: payFor(worker, entry),
-          receipt_status: closure ? "sent" : null
+          receipt_status: closure ? (closure.status === "sent" ? "sent" : "pending") : null
         };
       });
       return { period, closure, workers };
@@ -292,6 +292,15 @@
       data.payrollEntries[`${period.key}:${workerId}`] = { overtime, bonuses, deductions };
       persist();
       return { ok: true };
+    }
+    if (path === "/api/payroll/generate" && method === "POST") {
+      const admin = requireModule("payroll");
+      if (body.password !== admin.password) fail(401, "La contraseña de autorización no es correcta.");
+      const period = formatPeriod(body.period);
+      if (!data.workers.length) fail(400, "No hay trabajadores para procesar.");
+      data.closures[period.key] = { period_key: period.key, status: "generated", sent_at: new Date().toISOString() };
+      persist();
+      return { ok: true, message: "Demostración: comprobantes generados; no se envió ningún correo." };
     }
     if (path === "/api/payroll/send" && method === "POST") {
       const admin = requireModule("payroll");
@@ -331,8 +340,12 @@
     })[character]);
     const money = value => `$${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(value)}`;
     const receipt = `<!doctype html><html lang="es"><meta charset="utf-8"><title>Comprobante de demostración</title><style>body{max-width:680px;margin:48px auto;padding:24px;color:#1a1a1a;font:16px Arial;background:#f4f1ea}article{padding:32px;border:1px solid #cbd1ca;background:white}h1{color:#1b4332;font:600 28px Georgia}table{width:100%;border-collapse:collapse}td{padding:10px 0;border-bottom:1px solid #ddd}td:last-child{text-align:right;font-weight:bold}.note{margin-top:24px;color:#656b66;font-size:13px}</style><article><p>CARNES SANTA ELENA · DEMOSTRACIÓN</p><h1>Comprobante de nómina</h1><p>${escape(worker.name)} · ${escape(worker.position)}</p><p>${escape(payroll.period.label)}</p><table><tr><td>Salario quincenal</td><td>${money(worker.pay.base)}</td></tr><tr><td>Horas extra</td><td>${money(worker.pay.overtime)}</td></tr><tr><td>Bonos</td><td>${money(worker.pay.bonuses)}</td></tr><tr><td>Débitos</td><td>− ${money(worker.pay.deductions)}</td></tr><tr><td>Total a pagar</td><td>${money(worker.pay.total)}</td></tr></table><p class="note">Comprobante ficticio para revisión visual. No es un documento de pago real.</p></article></html>`;
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    if (popup) popup.document.write(receipt);
+    const popup = window.open("", "_blank");
+    if (popup) {
+      popup.opener = null;
+      popup.document.write(receipt);
+      popup.document.close();
+    }
   }
 
   window.demoMode = true;

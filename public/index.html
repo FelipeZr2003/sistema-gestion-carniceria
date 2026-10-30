@@ -154,7 +154,7 @@
             <div class="card summary-card"><span>Total a pagar</span><strong id="payroll-grand-total">$0</strong></div>
           </div>
           <div class="card table-card">
-            <div class="table-toolbar"><div><h3>Detalle por trabajador</h3><p class="muted small">El salario quincenal corresponde a la mitad del salario mensual.</p></div><button class="button button-primary" id="send-payroll">Enviar nómina</button></div>
+            <div class="table-toolbar"><div><h3>Detalle por trabajador</h3><p class="muted small">El salario quincenal corresponde a la mitad del salario mensual.</p></div><div class="period-actions"><button class="button button-outline" id="generate-payroll">Generar comprobantes</button><button class="button button-primary" id="send-payroll">Enviar nómina</button></div></div>
             <div class="table-wrap"><table><thead><tr><th>TRABAJADOR</th><th>BASE QUINCENAL</th><th>HORAS EXTRA</th><th>BONOS</th><th>DÉBITOS</th><th>TOTAL</th><th>COMPROBANTE</th><th></th></tr></thead><tbody id="payroll-body"></tbody></table></div>
             <div id="payroll-empty" class="empty-state hidden">Registra trabajadores para preparar la nómina.</div>
           </div>
@@ -227,10 +227,10 @@
 
   <dialog id="authorize-dialog" class="modal">
     <form id="authorize-form" method="dialog">
-      <div class="modal-heading"><div><span class="eyebrow">CIERRE SEGURO</span><h2>Autorizar envío de nómina</h2></div><button class="icon-button" type="button" data-close="authorize-dialog" aria-label="Cerrar">×</button></div>
-      <p class="muted">Se generará un comprobante PDF por trabajador y se enviará a su correo. El periodo quedará cerrado.</p>
+      <div class="modal-heading"><div><span class="eyebrow">AUTORIZACIÓN</span><h2 id="authorize-title">Autorizar envío de nómina</h2></div><button class="icon-button" type="button" data-close="authorize-dialog" aria-label="Cerrar">×</button></div>
+      <p id="authorize-description" class="muted">Se generarán los comprobantes PDF y se enviarán a los correos registrados. El periodo quedará cerrado.</p>
       <label class="field-label" for="authorize-password">Confirma tu contraseña</label><input id="authorize-password" type="password" autocomplete="current-password" required>
-      <div class="modal-actions"><button class="button button-outline" type="button" data-close="authorize-dialog">Cancelar</button><button class="button button-primary" type="submit">Enviar y cerrar periodo</button></div>
+      <div class="modal-actions"><button class="button button-outline" type="button" data-close="authorize-dialog">Cancelar</button><button id="authorize-submit" class="button button-primary" type="submit">Enviar y cerrar periodo</button></div>
     </form>
   </dialog>
 

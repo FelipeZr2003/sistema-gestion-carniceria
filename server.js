@@ -10,7 +10,7 @@ const nodemailer = require("nodemailer");
 const fs = require("node:fs");
 const path = require("node:path");
 const { createDatabase } = require("./src/db");
-const { createPayrollPdf, formatCop } = require("./src/payroll-pdf");
+const { generatePayrollReceipts } = require("./src/payroll-receipts");
 const { createAdminRouter } = require("./src/admin-routes");
 const {
   readUser,
@@ -449,6 +449,24 @@ app.put("/api/payroll/:period/:workerId", (req, res, next) => {
   }
 });
 
+app.post("/api/payroll/generate", asyncRoute(async (req, res) => {
+  const period = validatePeriodKey(req.body.period);
+  const password = String(req.body.password || "");
+  const currentUser = db.prepare("SELECT id, password_hash FROM users WHERE id = ?").get(req.session.user.id);
+  if (!currentUser || !(await bcrypt.compare(password, currentUser.password_hash))) {
+    throw httpError(401, "La contraseña de autorización no es correcta.");
+  }
+  const existingClosure = db.prepare("SELECT status FROM payroll_closures WHERE period_key = ?").get(period.key);
+  if (existingClosure?.status === "sent") {
+    throw httpError(409, "Esta quincena ya fue enviada y cerrada.");
+  }
+  const result = await generatePayrollReceipts(db, period);
+  res.json({
+    ...result,
+    message: "Comprobantes PDF generados. Puedes abrirlos desde el detalle de cada trabajador."
+  });
+}));
+
 app.post("/api/payroll/send", asyncRoute(async (req, res) => {
   const period = validatePeriodKey(req.body.period);
   const password = String(req.body.password || "");
@@ -460,13 +478,6 @@ app.post("/api/payroll/send", asyncRoute(async (req, res) => {
   if (existingClosure && existingClosure.status === "sent") {
     throw httpError(409, "Esta quincena ya fue enviada y cerrada.");
   }
-  const transporter = createMailer();
-  try {
-    await transporter.verify();
-  } catch (error) {
-    throw httpError(502, `No fue posible conectar con SMTP: ${error.message}`);
-  }
-
   const workers = db.prepare(`
     SELECT w.id, w.name, w.identification, w.position, w.monthly_salary, w.email,
       COALESCE(e.overtime, 0) AS overtime, COALESCE(e.bonuses, 0) AS bonuses,
@@ -475,49 +486,16 @@ app.post("/api/payroll/send", asyncRoute(async (req, res) => {
     ORDER BY w.name COLLATE NOCASE
   `).all(period.key);
   if (!workers.length) throw httpError(400, "No hay trabajadores registrados para procesar la nómina.");
+  await generatePayrollReceipts(db, period);
   const missingEmail = workers.filter(worker => !worker.email);
   if (missingEmail.length) {
     throw httpError(400, `Falta correo electrónico para: ${missingEmail.map(worker => worker.name).join(", ")}.`);
   }
-
-  const hasClosure = Boolean(existingClosure);
-  const snapshots = await Promise.all(workers.map(async worker => {
-    const saved = db.prepare(`
-      SELECT snapshot_json, pdf, delivery_status FROM payroll_receipts
-      WHERE period_key = ? AND worker_id = ?
-    `).get(period.key, worker.id);
-    if (saved) return { worker, receipt: saved };
-    const snapshot = {
-      periodKey: period.key,
-      periodLabel: period.label,
-      periodStart: period.start,
-      periodEnd: period.end,
-      worker: {
-        id: worker.id,
-        name: worker.name,
-        identification: worker.identification,
-        position: worker.position,
-        email: worker.email
-      },
-      pay: calculatePayroll(worker.monthly_salary, worker.overtime, worker.bonuses, worker.deductions)
-    };
-    const pdf = await createPayrollPdf(snapshot);
-    return { worker, snapshot, pdf };
-  }));
-
-  if (!hasClosure) {
-    db.transaction(() => {
-      db.prepare("INSERT INTO payroll_closures (period_key, status) VALUES (?, 'sending')").run(period.key);
-      const insert = db.prepare(`
-        INSERT INTO payroll_receipts (period_key, worker_id, snapshot_json, pdf)
-        VALUES (?, ?, ?, ?)
-      `);
-      for (const item of snapshots) {
-        if (item.snapshot) {
-          insert.run(period.key, item.worker.id, JSON.stringify(item.snapshot), item.pdf);
-        }
-      }
-    })();
+  const transporter = createMailer();
+  try {
+    await transporter.verify();
+  } catch (error) {
+    throw httpError(502, `No fue posible conectar con SMTP: ${error.message}`);
   }
 
   const pending = db.prepare(`
@@ -538,7 +516,7 @@ app.post("/api/payroll/send", asyncRoute(async (req, res) => {
         text: `Hola ${item.name}, adjuntamos tu comprobante de nómina correspondiente a ${snapshot.periodLabel}.`,
         attachments: [{
           filename: `comprobante-nomina-${period.key}-${item.worker_id}.pdf`,
-          content: item.pdf,
+          content: Buffer.from(item.pdf),
           contentType: "application/pdf"
         }]
       });
@@ -591,7 +569,7 @@ app.get("/api/payroll/:period/:workerId/receipt", (req, res, next) => {
     const safeName = receipt.name.replace(/[^\p{L}\p{N}-]/gu, "-").slice(0, 60);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="comprobante-${safeName}-${period.key}.pdf"`);
-    res.send(receipt.pdf);
+    res.send(Buffer.from(receipt.pdf));
   } catch (error) {
     next(error);
   }

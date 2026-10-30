@@ -6,6 +6,7 @@ const state = {
   payroll: null,
   payrollPeriod: null,
   payrollWorker: null,
+  payrollAction: "send",
   users: [],
   user: null,
   csrfToken: null,
@@ -613,11 +614,19 @@ function renderPayroll() {
   if (locked) {
     const statusText = result.closure.status === "sent"
       ? "Nómina enviada y periodo cerrado."
-      : `El envío quedó ${result.closure.status === "sending" ? "en proceso" : "parcial"}. Se pueden reintentar únicamente los comprobantes pendientes o fallidos.`;
+      : result.closure.status === "generated"
+        ? "Comprobantes PDF generados y periodo cerrado. Puedes abrirlos o enviarlos por correo cuando lo necesites."
+        : `El envío quedó ${result.closure.status === "sending" ? "en proceso" : "parcial"}. Se pueden reintentar únicamente los comprobantes pendientes o fallidos.`;
     $("#payroll-closed-banner").innerHTML = `<span>i</span><div><strong>Periodo ${escapeHtml(result.period.label)}</strong><p>${statusText}</p></div>`;
   }
+  $("#generate-payroll").disabled = locked;
+  $("#generate-payroll").textContent = locked
+    ? result.closure.status === "sent" ? "Periodo cerrado" : "Comprobantes generados"
+    : "Generar comprobantes";
   $("#send-payroll").disabled = locked && result.closure.status === "sent";
-  $("#send-payroll").textContent = locked && result.closure.status !== "sent" ? "Reintentar pendientes" : "Enviar nómina";
+  $("#send-payroll").textContent = !locked || result.closure.status === "generated"
+    ? "Enviar nómina"
+    : result.closure.status === "sent" ? "Nómina enviada" : "Reintentar pendientes";
   $("#send-payroll").classList.toggle("button-outline", locked);
   $("#send-payroll").classList.toggle("button-primary", !(locked && result.closure.status === "sent"));
   $("#payroll-workers-total").textContent = String(workers.length);
@@ -736,6 +745,24 @@ $("#send-payroll").addEventListener("click", () => {
     return;
   }
   if (state.payroll.closure?.status === "sent") return;
+  state.payrollAction = "send";
+  $("#authorize-title").textContent = "Autorizar envío de nómina";
+  $("#authorize-description").textContent = "Se generarán los comprobantes PDF y se enviarán a los correos registrados. El periodo quedará cerrado.";
+  $("#authorize-submit").textContent = "Enviar y cerrar periodo";
+  $("#authorize-password").value = "";
+  openDialog("authorize-dialog");
+});
+
+$("#generate-payroll").addEventListener("click", () => {
+  if (!state.payroll?.workers.length) {
+    notify("No hay trabajadores para procesar.", "error");
+    return;
+  }
+  if (state.payroll.closure) return;
+  state.payrollAction = "generate";
+  $("#authorize-title").textContent = "Autorizar generación de comprobantes";
+  $("#authorize-description").textContent = "Se generará y guardará un comprobante PDF por trabajador. No se enviará ningún correo.";
+  $("#authorize-submit").textContent = "Generar PDF y cerrar periodo";
   $("#authorize-password").value = "";
   openDialog("authorize-dialog");
 });
@@ -745,7 +772,7 @@ $("#authorize-form").addEventListener("submit", async event => {
   const submitButton = event.submitter;
   submitButton.disabled = true;
   try {
-    const result = await api("/api/payroll/send", {
+    const result = await api(state.payrollAction === "generate" ? "/api/payroll/generate" : "/api/payroll/send", {
       method: "POST",
       body: JSON.stringify({
         period: state.payrollPeriod,
@@ -756,7 +783,7 @@ $("#authorize-form").addEventListener("submit", async event => {
     await loadPayroll();
     notify(result.message);
   } catch (error) {
-    if (error.details?.status === "partial") await loadPayroll().catch(handleError);
+    await loadPayroll().catch(handleError);
     handleError(error);
   } finally {
     submitButton.disabled = false;
