@@ -1,0 +1,25 @@
+{
+  "name": "carnes-santa-elena",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicación local de gestión para Carnes Santa Elena",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.1.0",
+    "nodemailer": "^10.3.1",
+    "pdfkit": "^0.16.0"
+  }
+}

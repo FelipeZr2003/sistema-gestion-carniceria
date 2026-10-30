@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1b4332">
+  <title>Carnes Santa Elena | Gestión interna</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./demo-api.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main id="login-screen" class="login-screen">
+    <section class="login-panel">
+      <div class="login-emblem" aria-hidden="true">SE</div>
+      <p class="eyebrow">ESTABLECIDA · GESTIÓN INTERNA</p>
+      <h1>Carnes Santa Elena</h1>
+      <p class="login-description">Acceso al sistema administrativo de la empresa.</p>
+      <aside class="demo-notice hidden" role="note">Demostración pública: usa <strong>admin</strong> / <strong>DemoCarnes2026</strong>. Las cuentas y los datos se guardan solo en este navegador; no ingreses información real.<br><button id="demo-reset" class="text-button" type="button">Restablecer datos de demostración</button></aside>
+      <form id="global-login-form">
+        <label class="field-label" for="login-username">Usuario</label>
+        <input id="login-username" name="username" autocomplete="username" required>
+        <label class="field-label" for="login-password">Contraseña</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        <p id="login-error" class="login-error hidden" role="alert"></p>
+        <button class="button button-primary login-submit" type="submit">Ingresar al sistema</button>
+      </form>
+      <p class="login-footnote">Uso exclusivo del personal autorizado.</p>
+    </section>
+  </main>
+  <div class="app-shell hidden">
+    <aside class="sidebar">
+      <a class="brand" href="#inicio" aria-label="Carnes Santa Elena, inicio">
+        <span class="brand-mark">SE</span>
+        <span><strong>Carnes</strong><small>Santa Elena</small></span>
+      </a>
+      <div class="nav-caption">GESTIÓN</div>
+      <nav class="main-nav" aria-label="Módulos principales">
+        <button class="nav-item active" data-section="cash" data-module="cash"><span class="nav-icon">↔</span><span>Caja y vueltos</span></button>
+        <button class="nav-item" data-section="products" data-module="products"><span class="nav-icon">▤</span><span>Productos</span></button>
+        <button class="nav-item" data-section="inventory" data-module="inventory"><span class="nav-icon">▦</span><span>Inventarios</span></button>
+        <button class="nav-item" data-section="workers" data-module="workers"><span class="nav-icon">♙</span><span>Trabajadores</span></button>
+        <button class="nav-item" data-section="payroll" data-module="payroll"><span class="nav-icon">$</span><span>Nómina</span></button>
+        <button class="nav-item hidden" data-section="users" data-admin-only><span class="nav-icon">♙</span><span>Usuarios</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="status-dot"></span>
+        <span>Datos guardados localmente</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">CARNES SANTA ELENA</div>
+          <h1 id="page-title">Caja y vueltos</h1>
+        </div>
+        <div class="topbar-meta">
+          <span class="live-dot"></span><span id="header-user">Sistema local</span>
+          <button class="header-logout" id="header-logout" type="button">Salir</button>
+        </div>
+      </header>
+      <aside class="demo-notice demo-notice-wide hidden" role="note">Entorno de demostración: los cambios son locales a este navegador, no hay servidor ni envío real de nómina. No ingreses datos personales o contraseñas reutilizadas.</aside>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <section id="section-cash" class="page-section active">
+        <div class="section-intro">
+          <div><h2>Cálculo rápido de cambio</h2><p>Ingresa el valor de la compra y los billetes o monedas recibidos.</p></div>
+          <span class="soft-badge">CAJA</span>
+        </div>
+        <div class="cash-layout">
+          <article class="card cash-card">
+            <label class="field-label" for="purchase-amount">Valor de la compra</label>
+            <div class="money-input"><span>$</span><input id="purchase-amount" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+            <div class="divider"></div>
+            <div class="row-between"><h3>Dinero recibido</h3><button class="text-button" id="clear-cash">Limpiar</button></div>
+            <p class="muted small">Selecciona una denominación para agregarla al pago.</p>
+            <div class="denomination-grid" id="denominations"></div>
+            <div class="custom-denomination">
+              <label class="field-label" for="custom-denomination">Otra denominación</label>
+              <div class="inline-field"><input id="custom-denomination" type="number" min="1" step="1" placeholder="Valor en pesos"><button class="button button-outline" id="add-denomination">Agregar</button></div>
+            </div>
+            <div id="received-list" class="received-list"></div>
+            <div class="ticket-note"><span class="ticket-icon">▧</span><div><strong>Lectura de ticket de balanza</strong><p>Espacio preparado para una futura integración automática.</p></div><span class="coming-soon">PRÓXIMAMENTE</span></div>
+          </article>
+          <aside class="card change-card">
+            <div class="change-icon">↗</div>
+            <div class="muted">Cambio exacto</div>
+            <div id="change-value" class="change-value">$0</div>
+            <div id="change-message" class="change-message">Ingresa el valor de la compra</div>
+            <div class="change-breakdown">
+              <div><span>Total recibido</span><strong id="received-total">$0</strong></div>
+              <div><span>Valor compra</span><strong id="purchase-total">$0</strong></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="section-products" class="page-section">
+        <div class="section-intro">
+          <div><h2>Gestión de productos</h2><p>Administra el catálogo y los precios de venta.</p></div>
+          <button class="button button-primary" id="new-product">＋ Nuevo producto</button>
+        </div>
+        <div class="card table-card">
+          <div class="table-toolbar">
+            <div class="search-box"><span>⌕</span><input id="product-search" type="search" placeholder="Buscar por nombre o código"></div>
+            <span id="product-count" class="muted small"></span>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>CÓDIGO</th><th>PRODUCTO</th><th>CLASIFICACIÓN</th><th>PRECIO</th><th>UNIDAD</th><th></th></tr></thead><tbody id="products-body"></tbody></table></div>
+          <div id="products-empty" class="empty-state hidden">Aún no hay productos. Agrega el primero para comenzar.</div>
+        </div>
+      </section>
+
+      <section id="section-inventory" class="page-section">
+        <div class="section-intro">
+          <div><h2>Control de inventario</h2><p>Registra cantidades contadas para preparar el nuevo saldo físico.</p></div>
+          <button class="button button-primary" id="save-inventory">Guardar inventario</button>
+        </div>
+        <div class="notice"><span>i</span><div><strong>Cómo funciona</strong><p>La base corresponde al último inventario guardado. Suma aquí las nuevas cantidades contadas; al guardar, el saldo actual se convierte en la nueva base y el conteo se reinicia.</p></div></div>
+        <div class="card table-card">
+          <div class="table-toolbar"><div class="search-box"><span>⌕</span><input id="inventory-search" type="search" placeholder="Buscar producto"></div><span id="inventory-count" class="muted small"></span></div>
+          <div class="table-wrap"><table><thead><tr><th>PRODUCTO</th><th>UNIDAD</th><th>BASE ANTERIOR</th><th>SUMAR CONTEO</th><th>SALDO ACTUAL</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+          <div id="inventory-empty" class="empty-state hidden">Registra productos para comenzar el inventario.</div>
+        </div>
+      </section>
+
+      <section id="section-workers" class="page-section">
+        <div class="section-intro">
+          <div><h2>Gestión de trabajadores</h2><p>Información del equipo y datos de contacto.</p></div>
+          <button class="button button-primary" id="new-worker">＋ Nuevo trabajador</button>
+        </div>
+        <div class="card table-card">
+          <div class="table-toolbar"><div class="search-box"><span>⌕</span><input id="worker-search" type="search" placeholder="Buscar trabajador"></div><span id="worker-count" class="muted small"></span></div>
+          <div class="table-wrap"><table><thead><tr><th>TRABAJADOR</th><th>PUESTO</th><th>SALARIO MENSUAL</th><th>TELÉFONO</th><th>CORREO</th><th></th></tr></thead><tbody id="workers-body"></tbody></table></div>
+          <div id="workers-empty" class="empty-state hidden">Aún no hay trabajadores registrados.</div>
+        </div>
+      </section>
+
+      <section id="section-payroll" class="page-section">
+        <div class="section-intro">
+          <div><h2>Procesamiento de nómina</h2><p>Prepara, autoriza y envía los comprobantes de pago quincenal.</p></div>
+          <span class="soft-badge">PAGO SEGURO</span>
+        </div>
+        <div id="payroll-workspace">
+          <div class="period-toolbar card">
+            <div><span class="field-label">PERIODO DE PAGO</span><div class="period-selects"><input id="payroll-month" type="month"><select id="payroll-half"><option value="1">1.ª quincena · 1 al 15</option><option value="2">2.ª quincena · 16 al fin de mes</option></select></div></div>
+            <div class="period-actions"><span id="admin-name" class="muted small"></span></div>
+          </div>
+          <div id="payroll-closed-banner" class="notice hidden"></div>
+          <div class="payroll-summary">
+            <div class="card summary-card"><span>Trabajadores</span><strong id="payroll-workers-total">0</strong></div>
+            <div class="card summary-card"><span>Base quincenal</span><strong id="payroll-base-total">$0</strong></div>
+            <div class="card summary-card"><span>Total a pagar</span><strong id="payroll-grand-total">$0</strong></div>
+          </div>
+          <div class="card table-card">
+            <div class="table-toolbar"><div><h3>Detalle por trabajador</h3><p class="muted small">El salario quincenal corresponde a la mitad del salario mensual.</p></div><button class="button button-primary" id="send-payroll">Enviar nómina</button></div>
+            <div class="table-wrap"><table><thead><tr><th>TRABAJADOR</th><th>BASE QUINCENAL</th><th>HORAS EXTRA</th><th>BONOS</th><th>DÉBITOS</th><th>TOTAL</th><th>COMPROBANTE</th><th></th></tr></thead><tbody id="payroll-body"></tbody></table></div>
+            <div id="payroll-empty" class="empty-state hidden">Registra trabajadores para preparar la nómina.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-users" class="page-section">
+        <div class="section-intro">
+          <div><h2>Administración de usuarios</h2><p>Define las cuentas activas y los módulos disponibles para cada operador.</p></div>
+          <button class="button button-primary" id="new-user">＋ Nuevo usuario</button>
+        </div>
+        <div class="notice"><span>i</span><div><strong>Acceso administrativo</strong><p>Los Administradores tienen acceso total. Los Operadores solo pueden abrir los módulos que selecciones; el servidor también verifica cada solicitud.</p></div></div>
+        <div class="card table-card">
+          <div class="table-toolbar"><div><h3>Cuentas del sistema</h3></div><span id="user-count" class="muted small"></span></div>
+          <div class="table-wrap"><table><thead><tr><th>NOMBRE</th><th>USUARIO</th><th>ROL</th><th>ESTADO</th><th>MÓDULOS</th><th></th></tr></thead><tbody id="users-body"></tbody></table></div>
+          <div id="users-empty" class="empty-state hidden">No hay usuarios registrados.</div>
+        </div>
+      </section>
+
+      <section id="section-none" class="page-section">
+        <div class="section-intro"><div><h2>Sin módulos asignados</h2><p>Solicita al Administrador que te habilite acceso a los módulos necesarios.</p></div></div>
+      </section>
+
+      <footer class="app-footer">Carnes Santa Elena <span>·</span> Gestión interna</footer>
+    </main>
+  </div>
+
+  <dialog id="product-dialog" class="modal">
+    <form id="product-form" method="dialog">
+      <div class="modal-heading"><div><span class="eyebrow">CATÁLOGO</span><h2 id="product-dialog-title">Nuevo producto</h2></div><button class="icon-button" type="button" data-close="product-dialog" aria-label="Cerrar">×</button></div>
+      <input id="product-id" type="hidden">
+      <label class="field-label" for="product-code">Código único</label><input id="product-code" name="code" required maxlength="40">
+      <label class="field-label" for="product-name">Nombre del producto</label><input id="product-name" name="name" required maxlength="100">
+      <div class="form-grid">
+        <div><label class="field-label" for="product-category">Clasificación</label><select id="product-category" name="category" required><option>RES</option><option>CERDO</option><option>POLLO</option><option>PESCADO</option><option>EMBUTIDOS</option></select></div>
+        <div><label class="field-label" for="product-unit">Unidad</label><select id="product-unit" name="unit" required><option>KG</option><option>UNIDAD</option><option>PAQUETE</option></select></div>
+      </div>
+      <label class="field-label" for="product-price">Precio unitario (COP)</label><input id="product-price" name="unit_price" type="number" min="0" step="1" required>
+      <div class="modal-actions"><button class="button button-outline" type="button" data-close="product-dialog">Cancelar</button><button class="button button-primary" type="submit">Guardar producto</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="worker-dialog" class="modal">
+    <form id="worker-form" method="dialog">
+      <div class="modal-heading"><div><span class="eyebrow">EQUIPO</span><h2 id="worker-dialog-title">Nuevo trabajador</h2></div><button class="icon-button" type="button" data-close="worker-dialog" aria-label="Cerrar">×</button></div>
+      <input id="worker-id" type="hidden">
+      <label class="field-label" for="worker-name">Nombre completo</label><input id="worker-name" name="name" required maxlength="120">
+      <label class="field-label" for="worker-identification">Documento de identidad</label><input id="worker-identification" name="identification" maxlength="40">
+      <label class="field-label" for="worker-position">Puesto de trabajo</label><input id="worker-position" name="position" required maxlength="80">
+      <label class="field-label" for="worker-salary">Salario base mensual (COP)</label><input id="worker-salary" name="monthly_salary" type="number" min="0" step="1" required>
+      <div class="form-grid">
+        <div><label class="field-label" for="worker-phone">Teléfono</label><input id="worker-phone" name="phone" type="tel" required maxlength="24"></div>
+        <div><label class="field-label" for="worker-email">Correo electrónico</label><input id="worker-email" name="email" type="email" required maxlength="254"></div>
+      </div>
+      <div class="modal-actions"><button class="button button-outline" type="button" data-close="worker-dialog">Cancelar</button><button class="button button-primary" type="submit">Guardar trabajador</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="payroll-dialog" class="modal">
+    <form id="payroll-form" method="dialog">
+      <div class="modal-heading"><div><span class="eyebrow">AJUSTE DE PAGO</span><h2 id="payroll-dialog-title">Rubros de nómina</h2></div><button class="icon-button" type="button" data-close="payroll-dialog" aria-label="Cerrar">×</button></div>
+      <input id="payroll-worker-id" type="hidden">
+      <label class="field-label" for="payroll-overtime">Valor de horas extra (COP)</label><input id="payroll-overtime" type="number" min="0" step="1" required value="0">
+      <label class="field-label" for="payroll-bonuses">Bonos (COP)</label><input id="payroll-bonuses" type="number" min="0" step="1" required value="0">
+      <label class="field-label" for="payroll-deductions">Débitos / descuentos (COP)</label><input id="payroll-deductions" type="number" min="0" step="1" required value="0">
+      <div id="payroll-live-total" class="live-total"></div>
+      <div class="modal-actions"><button class="button button-outline" type="button" data-close="payroll-dialog">Cancelar</button><button class="button button-primary" type="submit">Guardar rubros</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="authorize-dialog" class="modal">
+    <form id="authorize-form" method="dialog">
+      <div class="modal-heading"><div><span class="eyebrow">CIERRE SEGURO</span><h2>Autorizar envío de nómina</h2></div><button class="icon-button" type="button" data-close="authorize-dialog" aria-label="Cerrar">×</button></div>
+      <p class="muted">Se generará un comprobante PDF por trabajador y se enviará a su correo. El periodo quedará cerrado.</p>
+      <label class="field-label" for="authorize-password">Confirma tu contraseña</label><input id="authorize-password" type="password" autocomplete="current-password" required>
+      <div class="modal-actions"><button class="button button-outline" type="button" data-close="authorize-dialog">Cancelar</button><button class="button button-primary" type="submit">Enviar y cerrar periodo</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="user-dialog" class="modal">
+    <form id="user-form" method="dialog">
+      <div class="modal-heading"><div><span class="eyebrow">CONTROL DE ACCESO</span><h2 id="user-dialog-title">Nuevo usuario</h2></div><button class="icon-button" type="button" data-close="user-dialog" aria-label="Cerrar">×</button></div>
+      <input id="user-id" type="hidden">
+      <label class="field-label" for="user-name">Nombre</label><input id="user-name" required maxlength="120">
+      <label class="field-label" for="user-username">Usuario</label><input id="user-username" required maxlength="40" autocomplete="off">
+      <label class="field-label" for="user-password">Contraseña <span id="password-hint" class="muted">(mínimo 12 caracteres)</span></label><input id="user-password" type="password" minlength="12" maxlength="200" autocomplete="new-password">
+      <div class="form-grid">
+        <div><label class="field-label" for="user-role">Rol</label><select id="user-role"><option value="operator">Operador</option><option value="admin">Administrador</option></select></div>
+        <div><label class="field-label" for="user-active">Estado</label><select id="user-active"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+      </div>
+      <fieldset id="user-permissions" class="permission-fieldset">
+        <legend>Permisos por módulo</legend>
+        <label><input type="checkbox" name="permission" value="cash"><span>Caja / Vueltos</span></label>
+        <label><input type="checkbox" name="permission" value="products"><span>Productos</span></label>
+        <label><input type="checkbox" name="permission" value="inventory"><span>Inventarios</span></label>
+        <label><input type="checkbox" name="permission" value="workers"><span>Trabajadores</span></label>
+        <label><input type="checkbox" name="permission" value="payroll"><span>Nómina</span></label>
+      </fieldset>
+      <div class="modal-actions"><button class="button button-outline" type="button" data-close="user-dialog">Cancelar</button><button class="button button-primary" type="submit">Guardar usuario</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
